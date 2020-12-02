@@ -1,13 +1,11 @@
 import pandas as pd
-#import sklearn
-#import numpy as np
 import matplotlib.pyplot as plt
 from sklearn import metrics
 from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
 from sklearn.linear_model import LinearRegression,Lasso,LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import classification_report, confusion_matrix
-from tabulate import tabulate
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import StandardScaler
 import time
 
 
@@ -20,7 +18,7 @@ def kmeans(datos):
     kmeans = KMeans(n_clusters=5)
     kmeans.fit(datos)
     labels = [0, 1, 2, 3, 4]
-    scatter=plt.scatter(datos['x'], datos['y'], c=kmeans.labels_, cmap='magma')
+    scatter=plt.scatter(datos['x'], datos['y'], c=kmeans.labels_, cmap='autumn')
     plt.legend(handles=scatter.legend_elements()[0], labels=labels)
     plt.title("K-Means")
     plt.show()
@@ -29,15 +27,16 @@ def kmeans(datos):
 def agglomerative(datos):
 
     #k = 1,2,3,4,5
-    agglomerative = AgglomerativeClustering(n_clusters=5)
+    agglomerative = AgglomerativeClustering(n_clusters=3)
     agglomerative.fit(datos)
     scatter=plt.scatter(datos['x'], datos['y'], c=agglomerative.labels_, cmap='rainbow')
     labels=[0,1,2,3,4]
     plt.legend(handles=scatter.legend_elements()[0],labels=labels)
+    plt.title("Agglomerative")
     plt.show()
 
     # umbral de distancia = 0.25, 0.50, 0.75, 1.0 y 1.5
-    agglomerative = AgglomerativeClustering(n_clusters=None, distance_threshold=0.25)
+    agglomerative = AgglomerativeClustering(n_clusters=None, distance_threshold=1.5)
     agglomerative.fit(datos)
     plt.scatter(datos['x'], datos['y'], c=agglomerative.labels_, cmap='rainbow')
     plt.legend()
@@ -50,10 +49,10 @@ def dbscan(datos):
     # 0.25 con 10 , 0.25 con 15, 0.35 con 15,
     # 0.5 con 5 sale 2 clases
     # El resto salen muchas
-    dbscan = DBSCAN(eps=0.5, min_samples=5)
+    dbscan = DBSCAN(eps=0.35, min_samples=5)
     dbscan.fit(datos)
     scatter=plt.scatter(datos['x'], datos['y'], c=dbscan.labels_, cmap='rainbow')
-    labels = [0, 1, 2, 3, 4,5,6,7,8]
+    labels = [0, 1, 2, 3, 4,5,6,7,8,9]
     plt.legend(handles=scatter.legend_elements()[0], labels=labels)
     plt.title("DB Scan")
     plt.show()
@@ -69,8 +68,7 @@ def knn(datos,datosTest):
         y = datos['class']
         knn.fit(x,y)
         predicted= knn.predict(x)
-        print("Matriz de Confusion y Reporte de clasificacion k=",i)
-        print(tabulate(confusion_matrix(predicted, y)))
+        print("Reporte de clasificacion k=",i)
         print(classification_report(predicted, y, labels=['windows']))
         print("Accuracy: ", metrics.accuracy_score(predicted, y))
 
@@ -93,13 +91,13 @@ def Parte1():
     datos = pd.read_csv("datos_1.csv")
     datos1 = pd.read_csv("datos_2.csv")
     datos2 = pd.read_csv("datos_3.csv")
-    datos3 = [datos, datos1, datos2]
+    datos3 = [datos2]
 
     # Parte 1
     for i in datos3:
-        kmeans(i)
+        #kmeans(i)
         agglomerative(i)
-        dbscan(i)
+        #dbscan(i)
 
 def Parte2():
     # Datos originales
@@ -133,13 +131,14 @@ def Parte2():
 
     knn(datos,datosTest)
 
-def Parte3():
+def Parte3(dataset1,dataset2):
 
+    #Datos de Entrenamiento
     #Regresion Lineal: minimos cuadrados
-    # Datos
-    datos = pd.read_csv("datos_4_train.csv")
-    datosTest = pd.read_csv("datos_4_test.csv")
+
     #datos originales
+    datos = pd.read_csv(dataset1)
+    datosTest = pd.read_csv(dataset2)
 
     x = datos.loc[:, datos.columns != 'score']
     y = datos['score']
@@ -151,20 +150,26 @@ def Parte3():
 
     #datos normalizados
     # Datos
-    datos = pd.read_csv("datos_4_train.csv")
-    datosTest = pd.read_csv("datos_4_test.csv")
-    x = datos.loc[:, datos.columns != 'score']
-    y = datos['score']
-    y_true = datosTest['score']
-    linearRegression = LinearRegression(normalize=True)
+    scaler = StandardScaler()
+    scaler.fit(datos)
+    datos=scaler.transform(datos)
+
+    scaler2 = StandardScaler()
+    scaler2.fit(datosTest)
+    datosTest=scaler2.transform(datosTest)
+
+    x = datos[:,:5]
+    y = datos[:, -1]
+    y_true = datosTest[:,-1]
+    linearRegression = LinearRegression()
     linearRegression.fit(x, y)
-    y_pred = linearRegression.predict(datosTest.loc[:, datosTest.columns != 'score'])
+    y_pred = linearRegression.predict(datosTest[:, :5])
     print("Regresion Lineal minimos cuadrados normalizado: ",metrics.mean_squared_error(y_true, y_pred))
 
     #Regresion Lineal: Lasso con regularizacion L1
     #datos originales
-    datos = pd.read_csv("datos_4_train.csv")
-    datosTest = pd.read_csv("datos_4_test.csv")
+    datos = pd.read_csv(dataset1)
+    datosTest = pd.read_csv(dataset2)
     x = datos.loc[:, datos.columns != 'score']
     y = datos['score']
     y_true = datosTest['score']
@@ -174,14 +179,23 @@ def Parte3():
     print("Regresion Lineal Lasso L1 sin normalizar:",metrics.mean_squared_error(y_true, y_pred))
 
     #datos normalizados
-    datos = pd.read_csv("datos_4_train.csv")
-    datosTest = pd.read_csv("datos_4_test.csv")
-    x = datos.loc[:, datos.columns != 'score']
-    y = datos['score']
-    y_true = datosTest['score']
-    linearRegression = Lasso(normalize=True)
+    datos = pd.read_csv(dataset1)
+    datosTest = pd.read_csv(dataset2)
+
+    scaler = StandardScaler()
+    scaler.fit(datos)
+    datos = scaler.transform(datos)
+
+    scaler2 = StandardScaler()
+    scaler2.fit(datosTest)
+    datosTest = scaler2.transform(datosTest)
+
+    x = datos[:, :5]
+    y = datos[:,-1]
+    y_true = datosTest[:,-1]
+    linearRegression = Lasso()
     linearRegression.fit(x, y)
-    y_pred = linearRegression.predict(datosTest.loc[:, datosTest.columns != 'score'])
+    y_pred = linearRegression.predict(datosTest[:, :5])
     print("Regresion Lineal Lasso L1 normalizado:",metrics.mean_squared_error(y_true, y_pred))
 
 
@@ -243,7 +257,7 @@ def main():
     #Parte2()
 
     #Parte3
-    #Parte3()
+    #Parte3("datos_4_train.csv","datos_4_train.csv")
 
     #Parte4
     Parte4()
